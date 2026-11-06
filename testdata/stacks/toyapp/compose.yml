@@ -1,0 +1,27 @@
+# Toy stack used by scan tests and later integration tests.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: toy-db
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+  app:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+      - appdata:/data
+  cache:
+    image: redis:7
+volumes:
+  pgdata:
+  appdata:

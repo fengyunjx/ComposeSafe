@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: make build
+      - name: Check (vet, tests, gofmt, no-delete guard)
+        run: make check
+      - name: Scan the toy stack against real Docker
+        run: ./bin/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy
+      - name: Integration tests (real Docker: snapshot, restore check, failure recovery)
+        run: make integration
