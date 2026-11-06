@@ -1,9 +1,20 @@
 # ComposeSafe
 
+[![CI](https://github.com/fengyunjx/ComposeSafe/actions/workflows/ci.yml/badge.svg)](https://github.com/fengyunjx/ComposeSafe/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/fengyunjx/ComposeSafe)](https://github.com/fengyunjx/ComposeSafe/releases)
+[![License](https://img.shields.io/github/license/fengyunjx/ComposeSafe)](LICENSE)
+[![Go](https://img.shields.io/github/go-mod/go-version/fengyunjx/ComposeSafe)](go.mod)
+
 [中文](README.zh-CN.md)
 
-A safety net for upgrading Docker Compose stacks: **assess the risk, take a verified snapshot, upgrade, verify, and roll back if anything breaks** — and rehearse the whole thing on a private copy first.
+**You bumped the Postgres image tag, the container won't start, and the old image can't read the data the new one already migrated. Now what?**
+
+ComposeSafe makes that a non-event. It is a safety net for upgrading Docker Compose stacks: **assess the risk, take a verified snapshot, upgrade, verify, and roll back if anything breaks** — and rehearse the whole thing on a private copy first.
 Commands that change anything default to a dry run. The command is `composesafe`; `csafe` is a short alias.
+
+<!-- TODO: 录好演示后取消注释并替换路径
+<p align="center"><img src="docs/demo.gif" alt="ComposeSafe demo: failed upgrade rolls back automatically" width="720"></p>
+-->
 
 > Status: **pre-release (v0.x)**. Everything below works and is tested against real Docker, except what is listed under [Limitations](#limitations).
 > Design and decisions: [docs/PRD.md](docs/PRD.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).

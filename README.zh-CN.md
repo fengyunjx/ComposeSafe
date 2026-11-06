@@ -1,9 +1,20 @@
 # ComposeSafe
 
+[![CI](https://github.com/fengyunjx/ComposeSafe/actions/workflows/ci.yml/badge.svg)](https://github.com/fengyunjx/ComposeSafe/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/fengyunjx/ComposeSafe)](https://github.com/fengyunjx/ComposeSafe/releases)
+[![License](https://img.shields.io/github/license/fengyunjx/ComposeSafe)](LICENSE)
+[![Go](https://img.shields.io/github/go-mod/go-version/fengyunjx/ComposeSafe)](go.mod)
+
 [English](README.md)
 
-Docker Compose 栈升级的"保险箱":**升级前评估风险、做经过校验的快照,升级后验证,出问题就回滚**;还可以先在一份私有副本上完整演练一遍。
+**把 Postgres 镜像升了一个版本,容器起不来,而旧镜像又读不了新版本已经迁移过的数据——怎么办?**
+
+ComposeSafe 让这件事不再可怕。它是 Docker Compose 栈升级的"保险箱":**升级前评估风险、做经过校验的快照,升级后验证,出问题就回滚**;还可以先在一份私有副本上完整演练一遍。
 会改动东西的命令默认只做演练式预览(dry run)。命令是 `composesafe`,`csafe` 是别名。
+
+<!-- TODO: 录好演示后取消注释并替换路径
+<p align="center"><img src="docs/demo.gif" alt="ComposeSafe demo: failed upgrade rolls back automatically" width="720"></p>
+-->
 
 > 状态:**预发布(v0.x)**。除[限制](#限制)里列出的以外,下面的功能都已在真实 Docker 上测试过。
 > 设计与决策:[docs/PRD.md](docs/PRD.md)、[docs/DESIGN.md](docs/DESIGN.md)、[docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
