@@ -119,6 +119,10 @@ Smoke types: `http`, `tcp`, `exec` (inside the container) and `command` (on the 
 - Rehearsal copies non-Postgres data from running volumes; it may not be consistent. `command` smoke checks are skipped in a rehearsal.
 - Only a local Docker daemon is supported.
 
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
+
 ## Development
 
 ```bash

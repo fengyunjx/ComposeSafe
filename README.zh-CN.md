@@ -119,6 +119,10 @@ services:
 - 演练对非 Postgres 数据是从运行中的卷拷贝,可能不一致;`command` 类冒烟检查在演练里会被跳过。
 - 只支持本机 Docker 守护进程。
 
+## 许可证
+
+Apache License 2.0,见 [LICENSE](LICENSE)。
+
 ## 开发
 
 ```bash
