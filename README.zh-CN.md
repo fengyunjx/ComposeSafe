@@ -17,7 +17,6 @@ ComposeSafe 让这件事不再可怕。它是 Docker Compose 栈升级的"保险
 -->
 
 > 状态:**预发布(v0.x)**。除[限制](#限制)里列出的以外,下面的功能都已在真实 Docker 上测试过。
-> 设计与决策:[docs/PRD.md](docs/PRD.md)、[docs/DESIGN.md](docs/DESIGN.md)、[docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
 
 ## 它能防什么
 
@@ -31,7 +30,19 @@ ComposeSafe 让这件事不再可怕。它是 Docker Compose 栈升级的"保险
 
 ## 安装
 
-从发布页下载对应平台的压缩包(`composesafe_<版本>_<系统>_<架构>.tar.gz`,附 `SHA256SUMS`),或自行构建:
+一行安装(Linux / macOS,amd64 / arm64;会校验 SHA-256):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fengyunjx/ComposeSafe/main/install.sh | sh
+```
+
+或用 Homebrew:
+
+```bash
+brew install fengyunjx/tap/composesafe
+```
+
+或从[发布页](https://github.com/fengyunjx/ComposeSafe/releases)下载对应平台的压缩包(`composesafe_<版本>_<系统>_<架构>.tar.gz`,附 `SHA256SUMS`),或自行构建:
 
 ```bash
 make build        # bin/composesafe,以及 bin/csafe 链接

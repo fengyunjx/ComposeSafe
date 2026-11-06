@@ -17,7 +17,6 @@ Commands that change anything default to a dry run. The command is `composesafe`
 -->
 
 > Status: **pre-release (v0.x)**. Everything below works and is tested against real Docker, except what is listed under [Limitations](#limitations).
-> Design and decisions: [docs/PRD.md](docs/PRD.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
 
 ## What it protects you from
 
@@ -31,7 +30,19 @@ Commands that change anything default to a dry run. The command is `composesafe`
 
 ## Install
 
-Download the archive for your platform from the releases page (`composesafe_<version>_<os>_<arch>.tar.gz`, with `SHA256SUMS`), or build:
+One line (Linux and macOS, amd64 and arm64; verifies the SHA-256 checksum):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fengyunjx/ComposeSafe/main/install.sh | sh
+```
+
+Or with Homebrew:
+
+```bash
+brew install fengyunjx/tap/composesafe
+```
+
+Or download the archive for your platform from the [releases page](https://github.com/fengyunjx/ComposeSafe/releases) (`composesafe_<version>_<os>_<arch>.tar.gz`, with `SHA256SUMS`), or build:
 
 ```bash
 make build        # bin/composesafe and a bin/csafe symlink

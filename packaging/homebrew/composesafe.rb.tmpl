@@ -1,0 +1,37 @@
+class Composesafe < Formula
+  desc "Safety net for upgrading Docker Compose stacks: snapshot, verify, roll back"
+  homepage "https://github.com/fengyunjx/ComposeSafe"
+  version "@VERSION_NO_V@"
+  license "Apache-2.0"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/fengyunjx/ComposeSafe/releases/download/@VERSION@/composesafe_@VERSION@_darwin_arm64.tar.gz"
+      sha256 "@SHA_DARWIN_ARM64@"
+    end
+    on_intel do
+      url "https://github.com/fengyunjx/ComposeSafe/releases/download/@VERSION@/composesafe_@VERSION@_darwin_amd64.tar.gz"
+      sha256 "@SHA_DARWIN_AMD64@"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/fengyunjx/ComposeSafe/releases/download/@VERSION@/composesafe_@VERSION@_linux_arm64.tar.gz"
+      sha256 "@SHA_LINUX_ARM64@"
+    end
+    on_intel do
+      url "https://github.com/fengyunjx/ComposeSafe/releases/download/@VERSION@/composesafe_@VERSION@_linux_amd64.tar.gz"
+      sha256 "@SHA_LINUX_AMD64@"
+    end
+  end
+
+  def install
+    bin.install Dir["*/composesafe"].first => "composesafe"
+    bin.install_symlink "composesafe" => "csafe"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/composesafe version")
+  end
+end
