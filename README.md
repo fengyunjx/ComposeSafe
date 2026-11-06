@@ -116,6 +116,7 @@ Smoke types: `http`, `tcp`, `exec` (inside the container) and `command` (on the 
 - Tested end to end on Docker Desktop (macOS) with Postgres 16 → 18; Postgres 14 → 16 and 17 → 18 have not been run against real images. CI runs the integration suite on Linux.
 - Postgres: a service that sets its own `PGDATA`, mounts a sub-directory of `/var/lib/postgresql/data`, or runs as a non-root `user:` is not handled specially.
 - A compose file whose image comes from an anchor, `extends`, `include` or a variable that is not in `.env` cannot be edited automatically: you get the reason before anything is touched.
+- On Linux the Postgres container takes ownership of a bind directory, so the new `<dir>_pg18` after a major upgrade (and a rehearsal copy of a bind-mounted database) is owned by the container's postgres user: removing it needs `sudo`. `cleanup` never deletes bind directories.
 - Rehearsal copies non-Postgres data from running volumes; it may not be consistent. `command` smoke checks are skipped in a rehearsal.
 - Only a local Docker daemon is supported.
 

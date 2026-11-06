@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -227,6 +228,16 @@ func TestPGMajorFailureSwitchesBackToTheUntouchedVolume(t *testing.T) {
 
 func TestPGMajorUpgradeOnABindDirectory(t *testing.T) {
 	y := newToy(t, dbToyCompose("./pgdata:/var/lib/postgresql/data", ""))
+	// On Linux the Postgres container chowns a bind directory to its own user,
+	// which the test user cannot delete (Docker Desktop on macOS maps owners
+	// and hides this). Stop the stack, then give the directories back.
+	t.Cleanup(func() {
+		_ = exec.Command("docker", "compose", "-p", y.project, "-f", y.file, "down", "--timeout", "2").Run()
+		for _, d := range []string{"pgdata", "pgdata_pg18"} {
+			_ = exec.Command("docker", "run", "--rm", "--network", "none", "-v", filepath.Join(y.dir, d)+":/d", helperImage(),
+				"chown", "-R", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()), "/d").Run()
+		}
+	})
 	rec := y.seedAndLateWrite(t)
 
 	res, err := y.upgradeDB(rec)

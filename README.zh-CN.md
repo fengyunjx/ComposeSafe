@@ -116,6 +116,7 @@ services:
 - 端到端测试在 Docker Desktop(macOS)上做过 Postgres 16 → 18;14 → 16、17 → 18 还没有用真实镜像跑过。CI 在 Linux 上跑集成测试。
 - Postgres:自行设置 `PGDATA`、挂载 `/var/lib/postgresql/data` 的子目录、或以非 root 的 `user:` 运行的服务,没有做特殊处理。
 - image 来自锚点、`extends`、`include` 或不在 `.env` 里的变量时,compose 无法自动修改:动手前就会告诉你原因。
+- 在 Linux 上 Postgres 容器会接管 bind 目录的属主:大版本升级后的 `<目录>_pg18`(以及 bind 挂载数据库的演练副本)属于容器里的 postgres 用户,删除它需要 `sudo`。`cleanup` 从不删除 bind 目录。
 - 演练对非 Postgres 数据是从运行中的卷拷贝,可能不一致;`command` 类冒烟检查在演练里会被跳过。
 - 只支持本机 Docker 守护进程。
 
