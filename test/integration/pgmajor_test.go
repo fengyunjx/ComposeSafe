@@ -87,6 +87,33 @@ func (y *toy) seedAndLateWrite(t *testing.T) *recorder {
 	}}
 }
 
+// treeHash is a hash over the names and contents of every file in a volume or
+// host directory, read through a container with the source mounted read-only.
+func treeHash(t *testing.T, source string) string {
+	t.Helper()
+	out, err := exec.Command("docker", "run", "--rm", "--network", "none", "-v", source+":/d:ro", helperImage(), "sh", "-c",
+		"cd /d && find . -type f -exec sha256sum {} + | sort -k2 | sha256sum").CombinedOutput()
+	if err != nil {
+		t.Fatalf("hash %s: %v %s", source, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// assertOldDataStaysUntouched: once the upgrade is over nothing may write to
+// the old location, however busy the new database is. The new server is made
+// to write and restart; the old tree must hash the same before and after.
+func (y *toy) assertOldDataStaysUntouched(t *testing.T, source string) {
+	t.Helper()
+	before := treeHash(t, source)
+	y.psql("postgres", "insert into orders values (2001, 'after the upgrade')")
+	y.psql("postgres", "checkpoint")
+	y.compose("restart", "db")
+	y.waitDB()
+	if after := treeHash(t, source); after != before {
+		t.Errorf("the old data at %s changed while the new database ran", source)
+	}
+}
+
 func (y *toy) dbMounts() string {
 	y.t.Helper()
 	id := y.compose("ps", "-q", "db")
@@ -146,6 +173,7 @@ func TestPGMajorUpgradeOnANamedVolume(t *testing.T) {
 	if m := y.dbMounts(); strings.Contains(m, vol+" ") || !strings.Contains(m, vol+"_pg18") {
 		t.Errorf("db container mounts: %s", m)
 	}
+	y.assertOldDataStaysUntouched(t, vol)
 	if y.get("/version") != "v1" {
 		t.Error("the app (a writer that was stopped meanwhile) must be serving again")
 	}
@@ -227,6 +255,7 @@ func TestPGMajorUpgradeOnABindDirectory(t *testing.T) {
 	if got := read(filepath.Join(y.dir, "pgdata_pg18"), "18/docker/PG_VERSION"); got != "18" {
 		t.Errorf("new directory = %q", got)
 	}
+	y.assertOldDataStaysUntouched(t, filepath.Join(y.dir, "pgdata"))
 }
 
 // After a successful major upgrade the old volume is left behind. `cleanup`

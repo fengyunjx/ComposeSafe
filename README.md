@@ -1,101 +1,129 @@
 # ComposeSafe
 
-A safety net for upgrading Docker Compose stacks: assess the risk, take a verified snapshot,
-upgrade, verify, and roll back if anything breaks. Commands that change anything default to a dry run.
+[中文](README.zh-CN.md)
 
-> Status: **early development (M8)**. `scan`, `plan`, `snapshot`, `upgrade` (including Postgres major versions), `rollback`, `rehearse`, `history`, `report` and `cleanup` work today; the other commands are listed in `--help`
-> and report which milestone will deliver them. See [docs/PRD.md](docs/PRD.md) and [docs/DESIGN.md](docs/DESIGN.md).
+A safety net for upgrading Docker Compose stacks: **assess the risk, take a verified snapshot, upgrade, verify, and roll back if anything breaks** — and rehearse the whole thing on a private copy first.
+Commands that change anything default to a dry run. The command is `composesafe`; `csafe` is a short alias.
 
-## Build
+> Status: **pre-release (v0.x)**. Everything below works and is tested against real Docker, except what is listed under [Limitations](#limitations).
+> Design and decisions: [docs/PRD.md](docs/PRD.md), [docs/DESIGN.md](docs/DESIGN.md), [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
 
-```bash
-make build        # bin/composesafe (and a bin/csafe symlink)
-make check        # vet + tests + gofmt + the "never delete data" guard
-```
+## What it protects you from
 
-Requires Go 1.24+, Docker Engine 27+ and Docker Compose 2.24+ on the machine that runs the Docker daemon.
+| Without it | With it |
+|---|---|
+| A new image migrates your database forward, then fails; the old image can no longer read it | The data is restored from a verified snapshot into a **new** volume; the failed state is kept untouched |
+| A floating tag (`latest`) moved, so "going back" pulls the new image again | The old image is pinned locally and restarted with `pull_policy: never` |
+| A Postgres major upgrade needs a dump/restore and a changed mount point (PG 18) | Done for you into a new volume; your original volume is never written to |
+| You find out the upgrade breaks only in production | `rehearse` runs the real upgrade on a copy of the stack and its data, with no way out to the network |
+| A "backup" that cannot be restored | Checksums, archive integrity, the dump's end marker, and a test restore into a throwaway server |
 
-## Try it
+## Install
 
-```bash
-./bin/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy
-./bin/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy --json
-COMPOSESAFE_LANG=zh ./bin/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy
-```
-
-```bash
-./bin/composesafe plan db -f compose.yml            # list newer tags of db's image
-./bin/composesafe plan db=16.4-alpine -f compose.yml  # assess the upgrade, write report.md
-```
-
-`plan` reads release notes (GitHub Releases, or postgresql.org for the official Postgres image), applies the
-risk rules and writes `report.md` plus `run.jsonl` under the state directory. It changes nothing in Docker or in your
-project. Exit code 2 means a BLOCK-level risk. Set `GITHUB_TOKEN` to raise GitHub's API limit.
-If Docker Hub is unreachable, tag listing falls back to the registry mirrors configured on your Docker daemon;
-if none can list tags, name the target tag yourself.
+Download the archive for your platform from the releases page (`composesafe_<version>_<os>_<arch>.tar.gz`, with `SHA256SUMS`), or build:
 
 ```bash
-./bin/composesafe snapshot app -f compose.yml                       # dry run: what would be stopped, backed up, how much space
-./bin/composesafe snapshot app -f compose.yml --execute             # asks for confirmation; --yes skips the prompt
-./bin/composesafe snapshot app -f compose.yml --execute --logical-only   # Postgres dump only, nothing is stopped
+make build        # bin/composesafe and a bin/csafe symlink
+make install      # into $GOBIN
 ```
 
-`snapshot` backs up the named services and the data they depend on: a `pg_dumpall` of Postgres, a cold archive of the
-volumes (the data services are stopped for that time and **started again even if the snapshot fails**), the compose
-files, `.env`, and a pinned copy of the current images. It then verifies checksums and archive integrity and, unless
-`--skip-restore-check` is given, replays the dump into a throwaway server and compares the tables. Everything lands in
-`<state dir>/<project>/<run id>/` with mode 0600; that directory holds secrets, treat it like them.
+Needs Go 1.24+ to build; to run: **Docker Engine 27+ and Docker Compose 2.24+ on the same machine as the project** (a remote `DOCKER_HOST` is refused: backups mount host paths).
+
+## Five-minute tour
 
 ```bash
-./bin/composesafe upgrade app=2.1 -f compose.yml                  # dry run: shows the risks, the exact file change, what is stopped
-./bin/composesafe upgrade app=2.1 -f compose.yml --execute        # asks you to confirm
-./bin/composesafe rollback -f compose.yml --execute               # go back to the latest snapshot
+cd your-project            # where compose.yaml lives
+
+composesafe scan                                     # services, images, volumes, which hold data
+composesafe plan db                                  # newer tags for db's image
+composesafe plan db=17.2                             # assess: release notes, risks, disk; writes report.md
+composesafe rehearse db=17.2                         # run the whole upgrade on a private copy; removes it afterwards
+composesafe upgrade db=17.2                          # dry run: the exact file change, what stops, risks to accept
+composesafe upgrade db=17.2 --execute                # snapshot -> change -> verify -> roll back by itself on failure
+composesafe rollback --execute                       # go back to the latest snapshot by hand
+composesafe history                                  # snapshots, upgrades, rehearsals
+composesafe report latest                            # the Markdown report of a run
+composesafe cleanup old-volumes                      # list volumes finished upgrades left behind (then --execute)
 ```
 
-`upgrade` assesses like `plan`, takes a verified snapshot, then changes **only the image value** in your compose file
-(comments and formatting stay), pulls, starts the new version with `--no-deps`, waits for health and runs your smoke checks.
-If anything fails it rolls back by itself: if the new version never started, the files and the old image are put back; if it ran,
-the data is restored from the snapshot into **new** volumes and your compose file is pointed at them. The volume that holds the
-failed state is never touched. Data written after the snapshot is lost, and the report says from when. HIGH/CRITICAL risks must be
-accepted interactively, or with `--yes --allow-risk=<id>`. Ctrl-C does not roll back by itself: run `rollback --run <id> --execute`.
+Try it without risk on the bundled stack: `composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy`.
 
-`scan` changes nothing. It lists each service's image, mounts and healthcheck, and shows which services
-hold data (official Postgres, Postgres derivatives, other databases, data directories) and why.
+## Commands
 
-## Configuration
+| Command | Changes anything? | What it does |
+|---|---|---|
+| `scan` | no | Lists services, images, volumes, and which services hold data |
+| `plan <svc>[=tag]` | no | Candidate tags; with a target: release notes, risk rules, disk check, `report.md` |
+| `snapshot <svc>...` | with `--execute` | Config backup, image pins, `pg_dumpall`, cold volume archives, verification, test restore. Stopped services always come back |
+| `upgrade <svc>=<tag>` | with `--execute` | Assess, snapshot, change **only the image value** (comments and formatting stay), pull, `up --no-deps`, health + smoke checks, automatic rollback |
+| `rollback [--run id]` | with `--execute` | Restore files and old image; restore data into new volumes if the new version ran |
+| `rehearse <svc>=<tag>` | only its own copy | Real upgrade on a private copy of stack and data; production is only read |
+| `history` / `report <id>` | no | List runs / print a run's report (an id prefix or `latest` is enough) |
+| `cleanup <id\|old-volumes\|rehearsals>` | **deletes**, with `--execute` | The only command that deletes your data; every item needs its name typed; no `--yes` |
 
-Optional `composesafe.yaml` next to the compose file; see the field table in DESIGN section 8.1.
-Precedence: flags > `COMPOSESAFE_*` environment > file > defaults. Secrets (API keys) are never read
-from the file, only from environment variables.
+Global flags: `-f/--file`, `-p/--project-name`, `-c/--config`, `--execute`, `--yes`, `--json`, `--lang en|zh`, `--force-unlock`.
+`--yes` skips the prompt but never overrides a BLOCK; HIGH/CRITICAL risks need `--yes --allow-risk=<id>` (or an interactive yes).
 
-A **Postgres major-version upgrade** (e.g. `upgrade db=18-alpine`) never upgrades the data in place. After the snapshot the services that
-write to the database are stopped, a final `pg_dumpall` is taken, an empty cluster of the new version is started on a **new** volume
-(`<volume>_pg18`, or `<dir>_pg18` for a bind mount), the dump is restored, statistics are refreshed (ANALYZE) and the tables are
-compared; then the writers come back. For Postgres 18 the mount point moves to `/var/lib/postgresql` as the new image expects.
-Your original volume is never written to by the new version, so a failed migration simply switches back to it: nothing is lost,
-and the migrated copy is kept for you to inspect. After a successful upgrade the old volume stays until you remove it.
+**Exit codes:** `0` ok · `1` error (including a failed rehearsal) · `2` blocked by a risk rule · `3` upgrade failed and was rolled back · `4` upgrade failed **and** the rollback failed (a manual recovery guide is printed and written to the report).
+
+## How it keeps data safe
+
+- Docker is only driven through the `docker` CLI; nothing is deleted except by `cleanup` (and a rehearsal's own copy). A static check in CI fails the build if destructive calls appear anywhere else.
+- A snapshot must **verify** before an upgrade starts. A failed snapshot still restarts the services it stopped.
+- Rollback never overwrites or deletes: data goes into a **new** volume/directory, and your compose file is pointed at it. Ctrl-C does not roll back by itself (the state is uncertain); `rollback --run <id>` picks up from the snapshot directory alone.
+- If you edit the compose file after an upgrade, `rollback` shows a line diff and asks before overwriting.
+- Secrets: `.env` values and `*PASSWORD/SECRET/TOKEN/KEY*` variables are masked in logs and reports. The state directory (`~/.local/state/composesafe/<project>/<run-id>/`, mode 0600) holds dumps and config copies — treat it like the secrets it contains.
+
+### Postgres major versions
+
+`upgrade db=18-alpine` never upgrades the data in place. The writers of the database are stopped, a final `pg_dumpall` is taken, an empty cluster of the new version is started on a **new** volume (`<volume>_pg18`, or `<dir>_pg18` for a bind mount), the dump is restored, statistics are refreshed (`ANALYZE`), table counts are compared, and the writers return. For Postgres 18 the mount point moves to `/var/lib/postgresql` as the new image expects. A failed migration simply switches back to the untouched original.
+
+### Rehearsal
+
+`rehearse` builds a copy of the project under its own name (own containers and volumes, no published ports, **no route to the outside** unless `--allow-egress`), copies the data (Postgres from the running database by dump; other volumes as files, read-only from the source), starts it in the current version, and then runs the real `upgrade` on it. Smoke checks run from a helper container inside the copy's network. Stacks that cannot be isolated (host networking, the Docker socket, read-write single-file mounts) are refused. A pass is evidence, not a promise: data volume, load and the outside world differ.
+
+## Configuration (`composesafe.yaml`, optional)
+
+```yaml
+version: 1
+lang: en                       # en | zh  (or --lang / COMPOSESAFE_LANG)
+state_dir: ~/.local/state/composesafe
+retention: {snapshots: 5}      # `history` only hints; nothing is deleted automatically
+services:
+  db:
+    snapshot: {mode: logical+volume, quiesce: [app, worker], restore_check: true}
+  app:
+    health_timeout: 120s
+    smoke:
+      - {name: http-ok, type: http, url: 'http://{{addr "app" 8080}}/healthz', expect_status: 200, retries: 10, interval: 3s}
+      - {name: port-open, type: tcp, addr: '{{addr "app" 8080}}'}
+```
+
+Smoke types: `http`, `tcp`, `exec` (inside the container) and `command` (on the host, no shell). `{{addr "svc" port}}` resolves to the published host port in production and to `svc:port` inside a rehearsal. Unknown keys are rejected; there are no secret fields — API keys come from environment variables. Environment overrides: `COMPOSESAFE_STATE_DIR`, `COMPOSESAFE_LANG`, `GITHUB_TOKEN` (raises GitHub's rate limit).
+
+## Support matrix
+
+| Data | Snapshot | Upgrade | Rehearsal |
+|---|---|---|---|
+| Official `postgres` image, named volume or bind dir | dump + cold archive + test restore | same major: yes; major: dump/restore into a new volume | yes |
+| `postgis`, `timescaledb`, `bitnami/postgresql`, `pgvector` | yes | same major only; a major bump is **blocked** | same major only |
+| Other named volumes / bind dirs (MySQL, Redis, files…) | cold archive (the service is stopped) | image change, data rollback from archive | files copied hot (may be inconsistent) |
+| Anonymous volumes, tmpfs, NFS/remote volume drivers | skipped with a warning | — | — |
+
+## Limitations
+
+- **No LLM yet.** Release notes are assessed by deterministic rules (keywords, version arithmetic, a Postgres EOL table). `llm:` settings are accepted and ignored (a note is printed); LLM summaries are planned and will never be required.
+- Tested end to end on Docker Desktop (macOS) with Postgres 16 → 18; Postgres 14 → 16 and 17 → 18 have not been run against real images. CI runs the integration suite on Linux.
+- Postgres: a service that sets its own `PGDATA`, mounts a sub-directory of `/var/lib/postgresql/data`, or runs as a non-root `user:` is not handled specially.
+- A compose file whose image comes from an anchor, `extends`, `include` or a variable that is not in `.env` cannot be edited automatically: you get the reason before anything is touched.
+- Rehearsal copies non-Postgres data from running volumes; it may not be consistent. `command` smoke checks are skipped in a rehearsal.
+- Only a local Docker daemon is supported.
+
+## Development
 
 ```bash
-./bin/composesafe rehearse db=18-alpine -f compose.yml     # runs the whole upgrade on a private copy, removes it afterwards
-./bin/composesafe rehearse app=2.1 -f compose.yml --keep   # keep the copy to look around
+make check         # vet, unit tests, gofmt, the "never delete" guard
+make lint          # staticcheck (go install honnef.co/go/tools/cmd/staticcheck@2025.1.1)
+make integration   # real Docker: 20 scenarios, ~15 minutes; CS_TEST_HELPER=alpine:3.21 to pick the helper image
+make dist          # cross-built archives + SHA256SUMS in dist/
 ```
-
-`rehearse` builds a copy of the stack under its own project name (own containers and volumes, no published ports, **no route to the outside**
-unless `--allow-egress`), copies your data into it (Postgres from the running database by dump, other volumes as files; your volumes are only
-read), starts it in the current version, and then runs the real `upgrade` on it: snapshot, change, verify, rollback on failure. Smoke checks run
-from a helper container inside the copy's network (`smoke_helper_image`, default `curlimages/curl`). Production is never stopped or changed.
-Stacks that cannot be isolated (host networking, the Docker socket) are refused. A pass is evidence, not a promise: data volume, load and the
-outside world differ. Use `--rehearse-env extra.yml` to give the copy rehearsal-only settings.
-
-```bash
-./bin/composesafe history -f compose.yml                  # snapshots, upgrades and rehearsals, newest first
-./bin/composesafe report latest -f compose.yml            # the Markdown report of a run (an id prefix is enough)
-./bin/composesafe cleanup old-volumes -f compose.yml      # list volumes that finished upgrades left behind
-./bin/composesafe cleanup old-volumes -f compose.yml --execute   # delete them, one by one, after you type each name
-./bin/composesafe cleanup 20261106-1010 -f compose.yml --execute # delete one run (snapshot, dumps, archives, image pins)
-./bin/composesafe cleanup rehearsals --execute            # remove rehearsal copies kept with --keep
-```
-
-`cleanup` is the only command that deletes your data. It lists first; with `--execute` every item is deleted only after you type its
-name, there is no `--yes`, and it needs a terminal. A volume is offered only when a finished upgrade or rollback left it behind and no container
-and none of your current compose files use it.

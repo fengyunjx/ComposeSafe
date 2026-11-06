@@ -17,7 +17,25 @@ jobs:
         run: make build
       - name: Check (vet, tests, gofmt, no-delete guard)
         run: make check
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+          make lint
+      - name: Cross-build the release binaries
+        run: make dist VERSION=ci
+
+  # Real Docker: the failure scenarios are what makes this tool trustworthy,
+  # so they run on every change. Linux also verifies archive ownership (scenario 17).
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Docker versions
+        run: docker version && docker compose version
       - name: Scan the toy stack against real Docker
-        run: ./bin/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy
-      - name: Integration tests (real Docker: snapshot, restore check, failure recovery)
+        run: go run ./cmd/composesafe scan -f testdata/stacks/toyapp/compose.yml -p toy
+      - name: Integration tests
         run: make integration

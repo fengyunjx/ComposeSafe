@@ -114,6 +114,11 @@ func (a *app) loadConfig() error {
 	}
 	a.cfg = cfg
 	a.t = i18n.T(cfg.Lang)
+	if cfg.LLM.Enabled {
+		// The setting is accepted so that a config file written for a later
+		// version keeps working, but nothing reads it yet: say so, once.
+		fmt.Fprintln(a.errOut, a.t("llm.unsupported"))
+	}
 	return nil
 }
 

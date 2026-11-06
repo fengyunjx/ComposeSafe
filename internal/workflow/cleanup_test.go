@@ -313,7 +313,7 @@ func TestCleanupOldVolumesOffersOnlyWhatIsLeftBehind(t *testing.T) {
 	// executing: each volume only after its own confirmation
 	o.Execute = true
 	var asked []string
-	res, err = Cleanup(t.Context(), d.deps(func(it CleanupItem) (bool, error) {
+	_, err = Cleanup(t.Context(), d.deps(func(it CleanupItem) (bool, error) {
 		asked = append(asked, it.Name)
 		return it.Name != "p_copy", nil
 	}), f.cfg, o)

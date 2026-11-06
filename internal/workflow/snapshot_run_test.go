@@ -168,6 +168,9 @@ func (s *sim) compose(args []string) (dockertest.Response, bool) {
 // archive plays the helper container: it writes a valid tgz into the backup dir.
 func (s *sim) archive(args []string) (dockertest.Response, bool) {
 	var dir, name string
+	if containsArg(args, "-v") && strings.Contains(strings.Join(args, " "), ":/backup:ro") {
+		return ok("") // unpacking an archive into a restored volume: nothing to write
+	}
 	for i, a := range args {
 		if a == "-v" && strings.HasSuffix(args[i+1], ":/backup") {
 			dir = strings.TrimSuffix(args[i+1], ":/backup")

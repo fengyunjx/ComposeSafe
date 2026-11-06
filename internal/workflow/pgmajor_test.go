@@ -163,11 +163,7 @@ func newPGSim(t *testing.T) *pgSim {
 func (s *pgSim) handle2(args []string, o docker.Opts) (dockertest.Response, bool) {
 	switch {
 	case args[0] == "volume" && args[1] == "ls":
-		var out []string
-		for _, v := range s.volumes {
-			out = append(out, v)
-		}
-		return ok(strings.Join(out, "\n"))
+		return ok(strings.Join(s.volumes, "\n"))
 	case args[0] == "volume" && args[1] == "rm":
 		s.note("volume-rm %s", args[2])
 		for i, v := range s.volumes {

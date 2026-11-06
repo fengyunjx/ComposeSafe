@@ -264,7 +264,7 @@ func (r *snapRun) preflight(ctx context.Context) error {
 		if err != nil {
 			r.m.Warnings = append(r.m.Warnings, "cannot read free space of Docker's data area: "+err.Error())
 		} else if free < r.plan.DockerNeed {
-			return fmt.Errorf("Docker's data area has %d bytes free but the restore check needs about %d: free some space or pass --skip-restore-check",
+			return fmt.Errorf("the data area of Docker has %d bytes free but the restore check needs about %d: free some space or pass --skip-restore-check",
 				free, r.plan.DockerNeed)
 		}
 	}

@@ -29,7 +29,8 @@ func TestNewRunID(t *testing.T) {
 	if !regexp.MustCompile(`^20261106-090503-[0-9a-f]{4}$`).MatchString(id) {
 		t.Errorf("bad run id %q", id)
 	}
-	if NewRunID(time.Now()) == NewRunID(time.Now()) {
+	now := time.Now()
+	if a, b := NewRunID(now), NewRunID(now); a == b {
 		t.Log("two ids in the same second collided (1/65536 chance); rerun if flaky")
 	}
 }

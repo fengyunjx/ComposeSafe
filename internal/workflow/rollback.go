@@ -445,7 +445,7 @@ func (r *rollbackRun) restoreMounts(ctx context.Context) error {
 				return err
 			}
 			if err := r.switchMount(s.Name, mt, newTarget); err != nil {
-				return fmt.Errorf("%w\nYour data is restored in %s. Point %s at it in your compose file by hand.", err, newTarget, s.Name)
+				return fmt.Errorf("%w (your data is restored in %s: point %s at it in your compose file by hand)", err, newTarget, s.Name)
 			}
 		}
 	}
