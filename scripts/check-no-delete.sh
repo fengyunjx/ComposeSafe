@@ -1,5 +1,5 @@
 #!/bin/sh
-# Static guard for the "never delete user data" rule (DESIGN 5.1 / 12.2).
+# Static guard for the "never delete user data" rule.
 # Destructive docker invocations may only appear in the two files that own
 # deletion: cleanup (explicit, confirmed) and rehearse (label-scoped).
 set -eu

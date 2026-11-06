@@ -4,3 +4,10 @@
 *.out
 coverage.txt
 /dist/
+
+# Internal design / test / development notes and promotion drafts: kept locally, not published
+/docs/PRD.md
+/docs/DESIGN.md
+/docs/ACCEPTANCE.md
+/docs/REVIEW.md
+/promo/
