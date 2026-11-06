@@ -36,12 +36,6 @@ ComposeSafe 让这件事不再可怕。它是 Docker Compose 栈升级的"保险
 curl -fsSL https://raw.githubusercontent.com/fengyunjx/ComposeSafe/main/install.sh | sh
 ```
 
-或用 Homebrew:
-
-```bash
-brew install fengyunjx/tap/composesafe
-```
-
 或从[发布页](https://github.com/fengyunjx/ComposeSafe/releases)下载对应平台的压缩包(`composesafe_<版本>_<系统>_<架构>.tar.gz`,附 `SHA256SUMS`),或自行构建:
 
 ```bash

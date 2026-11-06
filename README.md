@@ -36,12 +36,6 @@ One line (Linux and macOS, amd64 and arm64; verifies the SHA-256 checksum):
 curl -fsSL https://raw.githubusercontent.com/fengyunjx/ComposeSafe/main/install.sh | sh
 ```
 
-Or with Homebrew:
-
-```bash
-brew install fengyunjx/tap/composesafe
-```
-
 Or download the archive for your platform from the [releases page](https://github.com/fengyunjx/ComposeSafe/releases) (`composesafe_<version>_<os>_<arch>.tar.gz`, with `SHA256SUMS`), or build:
 
 ```bash
